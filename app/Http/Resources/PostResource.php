@@ -20,7 +20,11 @@ class PostResource extends JsonResource
             'slug' => $this->slug,
             'user' => $this->user->name,
             'body' => $this->body,
-            'imagePath' => $this->imagePath,
+            'images' => $this->images->map(function ($image) {
+                return [
+                    'url' => $image->url,
+                ];
+            }),
             'category_id' => $this->category_id,
             'created_at' => $this->created_at->diffForHumans(),
         ];

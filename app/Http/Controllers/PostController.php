@@ -63,7 +63,8 @@ class PostController extends Controller
         if (auth()->user()->id !== $post->user->id) {
             return abort(403);
         }
-        return new PostResource($post);
+
+        return new PostResource($post->load('images'));
     }
 
     public function update(Request $request, Post $post)
