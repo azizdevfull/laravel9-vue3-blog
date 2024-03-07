@@ -7,11 +7,17 @@ use App\Http\Resources\PostResource;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Models\Post;
+use App\Services\AttachmentService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
+
+    public function __construct(protected AttachmentService $attachmentService)
+    {
+    }
+
     public function index(Request $request)
     {
         if ($request->category) {
@@ -74,7 +80,7 @@ class PostController extends Controller
         }
         $request->validate([
             'title' => 'required',
-            'file' => 'nullable | image',
+            'images.*' => 'nullable|image|min:3',
             'body' => 'required',
             'category_id' => 'required'
         ]);
@@ -85,18 +91,19 @@ class PostController extends Controller
 
         $slug = Str::slug($title, '-') . '-' . $post->id;
         $body = $request->input('body');
-
-        if ($request->file('file')) {
-            File::delete($post->imagePath);
-            $imagePath = 'storage/' . $request->file('file')->store('postsImages', 'public');
-            $post->imagePath = $imagePath;
-        }
-
-        // create and save post
         $post->title = $title;
         $post->category_id = $category_id;
         $post->slug = $slug;
         $post->body = $body;
+
+        if ($request->images) {
+            $oldImages = $post->images;
+            $this->attachmentService->destroy($oldImages);
+            $post->images()->delete();
+
+            event(new AttachmentEvent($request->images, $post->images()));
+        }
+
         return $post->save();
     }
 
