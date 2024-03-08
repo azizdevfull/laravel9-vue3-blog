@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardPostController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\RelatedPostController;
 use Illuminate\Http\Request;
@@ -38,6 +39,9 @@ Route::middleware('auth:sanctum')->post('posts', [PostController::class, 'store'
 Route::middleware('auth:sanctum')->put('posts/{post:slug}', [PostController::class, 'update']);
 Route::middleware('auth:sanctum')->delete('posts/{post:slug}', [PostController::class, 'destroy']);
 
+// Messages
+Route::middleware('auth:sanctum')->post('/posts/{id}/messages', [MessageController::class, 'store']);
+Route::middleware('auth:sanctum')->get('/posts/{post:slug}/messages', [MessageController::class, 'getMessages']);
 
 //////////////////////////////////////////////// PUBLIC ROUTES //////////////////////////////////////////////// 
 Route::post('register', [RegisteredUserController::class, 'store']);

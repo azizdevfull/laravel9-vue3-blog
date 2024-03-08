@@ -24,4 +24,9 @@ class Post extends Model
     {
         return $this->morphMany(Attachment::class, 'attachment');
     }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
 }
