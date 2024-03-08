@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->foreign('admin_id')->references('id')->on('users')->nullable()->onDelete('set null');
+            $table->foreign('admin_id')->nullable();
         });
     }
 
