@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->foreign('admin_id')->nullable();
+            $table->string('admin_id')->nullable();
         });
     }
 
