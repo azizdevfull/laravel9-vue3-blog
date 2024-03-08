@@ -133,6 +133,10 @@
     </section>
 </template>
 <script>
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+window.Pusher = Pusher;
+
 export default {
     emits: ["updateSidebar"],
     props: ["slug"],
@@ -143,6 +147,7 @@ export default {
             messages: [],
             text: "",
             currentUser: null,
+            echo: null,
         };
     },
 
@@ -201,6 +206,21 @@ export default {
             .catch((error) => {
                 console.log(error);
             });
+
+        window.Echo = new Echo({
+            broadcaster: "pusher",
+            key: "local",
+            wsHost: "127.0.0.1",
+            wsPort: 6001,
+            cluster: "mt1",
+            forceTLS: false,
+            disableStats: true,
+        });
+
+        // Listen for the message created event
+        this.echo.channel("messages").listen(".message.created", (event) => {
+            this.messages.push(event.message);
+        });
     },
 };
 </script>

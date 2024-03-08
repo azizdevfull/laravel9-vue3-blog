@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageCreated;
+use App\Events\PostUpdated;
 use App\Http\Resources\MessageResource;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -15,7 +17,6 @@ class MessageController extends Controller
         if (!$post) {
             return response()->json(['message' => 'Post not found!']);
         }
-        // dd(Auth::user()->id, $post->user_id);
         if ($post->user_id != Auth::user()->id) {
             $message = $post->messages()->create([
                 'text' => $request->text,
@@ -27,12 +28,12 @@ class MessageController extends Controller
                 'admin_id' => Auth::user()->id,
             ]);
         }
+        broadcast(new MessageCreated($message))->toOthers();
         return new MessageResource($message);
     }
 
     public function getMessages(Post $post)
     {
-        // dd($post);
         if (!$post) {
             return response()->json(['message' => 'Post not found!']);
         }
