@@ -16,20 +16,8 @@ class MessageController extends Controller
         if (!$post) {
             return response()->json(['message' => 'Post not found!']);
         }
-
-        $recipientId = $post->user_id;
-
-        // Check if the authenticated user is the post author
-        if ($post->user_id === Auth::id()) {
-            // If the post author is sending the message, set the recipient ID to the recipient of the message
-            $recipientId = $post->user_id;
-        }
-
         $message = $post->messages()->create([
             'text' => $request->text,
-            'user_id' => Auth::id(), // Sender ID
-            'to' => $recipientId, // Recipient ID
-            'from' => Auth::id(), // Sender ID
         ]);
 
         broadcast(new NewMessage($message))->toOthers();
