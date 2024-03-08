@@ -7,6 +7,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\RelatedPostController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\RegisteredUserController;
@@ -22,6 +23,7 @@ use Laravel\Fortify\Http\Controllers\RegisteredUserController;
 |
 */
 
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 //////////////////////////////////////////////// PRIVATE ROUTES //////////////////////////////////////////////// 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

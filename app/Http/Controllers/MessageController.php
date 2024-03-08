@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NewMessage;
 use App\Http\Resources\MessageResource;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -15,20 +16,29 @@ class MessageController extends Controller
         if (!$post) {
             return response()->json(['message' => 'Post not found!']);
         }
-        // dd(Auth::user()->id, $post->user_id);
-        if ($post->user_id != Auth::user()->id) {
-            $message = $post->messages()->create([
-                'text' => $request->text,
-                'user_id' => Auth::user()->id,
-            ]);
-        } else {
-            $message = $post->messages()->create([
-                'text' => $request->text,
-                'admin_id' => Auth::user()->id,
-            ]);
+
+        $recipientId = $post->user_id;
+
+        // Check if the authenticated user is the post author
+        if ($post->user_id === Auth::id()) {
+            // If the post author is sending the message, set the recipient ID to the recipient of the message
+            $recipientId = $post->user_id;
         }
+
+        $message = $post->messages()->create([
+            'text' => $request->text,
+            'user_id' => Auth::id(), // Sender ID
+            'to' => $recipientId, // Recipient ID
+            'from' => Auth::id(), // Sender ID
+        ]);
+
+        broadcast(new NewMessage($message))->toOthers();
+
         return new MessageResource($message);
     }
+
+
+
 
     public function getMessages(Post $post)
     {

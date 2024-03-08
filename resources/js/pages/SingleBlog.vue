@@ -1,6 +1,6 @@
 <template>
     <section class="single-blog-post">
-        <h1>{{ post.title }}</h1>
+        <h1>{{ post?.title }}</h1>
 
         <p class="time-and-author">
             {{ post.created_at }}
@@ -63,45 +63,10 @@
                             <div
                                 v-for="(message, index) in messages"
                                 :key="index"
-                                :class="{
-                                    'd-flex justify-content-start mb-4':
-                                        message.user_id !== currentUser.id,
-                                    'd-flex justify-content-end mb-4':
-                                        message.user_id === currentUser.id,
-                                }"
+                                :class="'d-flex justify-content-start mb-4'"
                             >
-                                <div
-                                    :class="{
-                                        'p-3 ms-3':
-                                            message.user_id !== currentUser.id,
-                                        'p-3 me-3 border':
-                                            message.user_id === currentUser.id,
-                                    }"
-                                    :style="{
-                                        borderRadius:
-                                            message.user_id !== currentUser.id
-                                                ? '15px'
-                                                : '15px',
-                                        backgroundColor:
-                                            message.user_id !== currentUser.id
-                                                ? 'rgba(57, 192, 237, 0.2)'
-                                                : '#fbfbfb',
-                                    }"
-                                >
+                                <div>
                                     <p class="small mb-0">
-                                        {{
-                                            message.user
-                                                ? message.user.id ===
-                                                  currentUser.id
-                                                    ? "You"
-                                                    : message.user.name
-                                                : message.admin
-                                                ? message.admin.id ===
-                                                  currentUser.id
-                                                    ? "You"
-                                                    : message.admin.name
-                                                : ""
-                                        }}:
                                         {{ message.text }}
                                     </p>
                                 </div>
@@ -133,6 +98,9 @@
     </section>
 </template>
 <script>
+import axios from "axios";
+import Pusher from "pusher-js";
+
 export default {
     emits: ["updateSidebar"],
     props: ["slug"],
@@ -143,64 +111,81 @@ export default {
             messages: [],
             text: "",
             currentUser: null,
+            pusher: null,
         };
     },
-
     methods: {
-        submit() {
+        async submit() {
             const formData = new FormData();
-
             formData.append("text", this.text);
-            axios
-                .post(`/api/posts/${this.post.id}/messages`, formData, {
-                    headers: { "content-type": "multipart/form-data" },
-                })
-                .then(() => {
-                    this.fields = {};
-                    this.urls = [];
-                    this.images = [];
-                    this.fields.category_id = "";
-                    this.success = true;
-                    this.errors = {};
 
-                    setTimeout(() => {
-                        this.success = false;
-                    }, 2500);
-                })
-                .catch((error) => {
-                    this.errors = error.response.data.errors;
-                    this.success = false;
-                });
+            try {
+                await axios.post(
+                    `/api/posts/${this.post.id}/messages`,
+                    formData,
+                    {
+                        headers: { "content-type": "multipart/form-data" },
+                    }
+                );
+                this.text = "";
+            } catch (error) {
+                console.error("Error submitting message:", error);
+            }
+        },
+        async getMessages() {
+            return axios.get(`/api/posts/${this.slug}/messages`);
         },
     },
-    mounted() {
-        axios
-            .get("/api/posts/" + this.slug)
-            .then((response) => (this.post = response.data.data))
-            .catch((error) => {
-                console.log(error);
+    async mounted() {
+        try {
+            const [
+                postResponse,
+                relatedPostsResponse,
+                userResponse,
+                messagesResponse,
+            ] = await Promise.all([
+                axios.get("/api/posts/" + this.slug),
+                axios.get("/api/related-posts/" + this.slug),
+                axios.get("/api/user"),
+                axios.get(`/api/posts/${this.slug}/messages`),
+            ]);
+
+            this.post = postResponse.data.data;
+            this.relatedPosts = relatedPostsResponse.data.data;
+            this.messages = messagesResponse.data.data;
+            this.currentUser = userResponse.data;
+
+            if (!this.currentUser || !this.currentUser.id) {
+                console.error(
+                    "User data is missing or incomplete:",
+                    this.currentUser
+                );
+                return;
+            }
+
+            // Initialize Pusher
+            // Echo.private(`chat`).listen("NewMessage", (e) => {
+            //     console.log(e);
+            //     this.messages.push(e.message);
+            // });
+
+            window.Echo.private("chat").listen("NewMessage", (e) => {
+                console.log(e.message);
+                this.messages.push(e.message);
+                this.messages = this.getMessages.data.data;
             });
 
-        axios
-            .get("/api/related-posts/" + this.slug)
-            .then((response) => (this.relatedPosts = response.data.data))
-            .catch((error) => {
-                console.log(error);
-            });
-        axios
-            .get(`/api/posts/${this.slug}/messages`)
-            .then((response) => (this.messages = response.data.data))
-            .catch((error) => {
-                console.log(error);
-            });
-        axios
-            .get("/api/user")
-            .then((response) => {
-                this.currentUser = response.data;
-            })
-            .catch((error) => {
-                console.log(error);
-            });
+            // const channel = this.pusher.subscribe(
+            //     `messages.${this.currentUser.id}`
+            // );
+
+            // channel.bind("NewMessage", (data) => {
+            //     console.log("New message received:", data);
+            //     this.messages.push(data.message);
+            // });
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
     },
 };
 </script>
