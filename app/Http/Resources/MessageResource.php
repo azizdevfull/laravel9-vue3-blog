@@ -18,6 +18,7 @@ class MessageResource extends JsonResource
             'id' => $this->id,
             'text' => $this->text,
             'post' => new PostResource($this->post),
+            'user' => $this->user
         ];
     }
 }

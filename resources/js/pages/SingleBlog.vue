@@ -5,7 +5,8 @@
             <h1>{{ post?.title }}</h1>
             <p class="time-and-author">
                 {{ post.created_at }}
-                <span>Written By {{ post.user }}</span>
+                <span v-if="post.user">{{ post.user.name }}</span>
+                <span v-else>Unknown</span>
             </p>
             <div v-for="(image, index) in post.images" :key="index">
                 <img
@@ -71,6 +72,14 @@
                                 >
                                     <div>
                                         <p class="small mb-0">
+                                            {{
+                                                message.user_id ===
+                                                currentUser.id
+                                                    ? `(${currentUser.name})`
+                                                    : message.user
+                                                    ? `(${message.user.name})`
+                                                    : "Unknown"
+                                            }}
                                             {{ message.text }}
                                         </p>
                                     </div>
@@ -80,17 +89,17 @@
                                 <!-- Chat input form -->
                                 <div class="form-outline">
                                     <form @submit.prevent="submit">
-                                        <textarea
-                                            v-model="text"
-                                            class="form-control"
-                                            id="textAreaExample"
-                                            rows="4"
-                                        ></textarea>
                                         <input
-                                            class="add-post-btn"
-                                            type="submit"
-                                            value="Submit"
+                                            v-model="text"
+                                            type="text"
+                                            id="textAreaExample"
                                         />
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary"
+                                        >
+                                            Submit
+                                        </button>
                                     </form>
                                 </div>
                                 <!-- End Chat input form -->
@@ -115,56 +124,65 @@ export default {
             relatedPosts: [],
             messages: [],
             text: "",
+            loading: false,
+            error: null,
+            currentUser: null,
         };
     },
     methods: {
         async submit() {
-            const formData = new FormData();
-            formData.append("text", this.text);
-
             try {
+                this.loading = true;
+                const formData = new FormData();
+                formData.append("text", this.text);
                 await axios.post(
                     `/api/posts/${this.post.id}/messages`,
-                    formData,
-                    {
-                        headers: { "content-type": "multipart/form-data" },
-                    }
+                    formData
                 );
-                // Update local state with the new message
-                this.messages.push({ text: this.text });
-                // Clear the input field
+                this.messages.push({
+                    text: this.text,
+                    user_id: this.currentUser.id,
+                });
                 this.text = "";
             } catch (error) {
                 console.error("Error submitting message:", error);
+                this.error = "Error submitting message";
+            } finally {
+                this.loading = false;
             }
         },
         async fetchData() {
             try {
-                const [postResponse, relatedPostsResponse, messagesResponse] =
-                    await Promise.all([
-                        axios.get(`/api/posts/${this.slug}`),
-                        axios.get(`/api/related-posts/${this.slug}`),
-                        axios.get(`/api/posts/${this.slug}/messages`),
-                    ]);
-
+                const [
+                    postResponse,
+                    relatedPostsResponse,
+                    messagesResponse,
+                    currentUserResponse,
+                ] = await Promise.all([
+                    axios.get(`/api/posts/${this.slug}`),
+                    axios.get(`/api/related-posts/${this.slug}`),
+                    axios.get(`/api/posts/${this.slug}/messages`),
+                    axios.get(`/api/user`),
+                ]);
                 this.post = postResponse.data.data;
                 this.relatedPosts = relatedPostsResponse.data.data;
                 this.messages = messagesResponse.data.data;
+                this.currentUser = currentUserResponse.data;
             } catch (error) {
                 console.error("Error fetching data:", error);
+                this.error = "Error fetching data";
             }
         },
         initializePusher() {
             window.Echo.private("chat").listen("NewMessage", (e) => {
                 console.log(e.message);
-                // Add the new message to the local state
                 this.messages.push(e.message);
             });
         },
     },
     mounted() {
-        this.fetchData(); // Fetch initial data
-        this.initializePusher(); // Initialize Pusher for real-time updates
+        this.fetchData();
+        this.initializePusher();
     },
 };
 </script>

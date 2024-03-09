@@ -24,10 +24,8 @@ class NewMessage implements ShouldBroadcast
      */
     public function __construct(Message $message)
     {
-        $this->message = $message;
+        $this->message = $message->load('user');
     }
-
-
 
     /**
      * Get the channels the event should broadcast on.
