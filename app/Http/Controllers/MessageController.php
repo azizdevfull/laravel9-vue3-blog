@@ -5,41 +5,24 @@ namespace App\Http\Controllers;
 use App\Events\NewMessage;
 use App\Http\Resources\MessageResource;
 use App\Models\Post;
+use App\Services\MessageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MessageController extends Controller
 {
-    public function store(Request $request, $id)
+    public function __construct(protected MessageService $messageService)
     {
-        $post = Post::find($id);
-
-        if (!$post) {
-            return response()->json(['message' => 'Post not found!']);
-        }
-
-        $userId = Auth::id();
-
-        $message = $post->messages()->create([
-            'text' => $request->text,
-            'user_id' => $userId, // Assuming you want to associate the logged-in user with the message
-        ]);
-
-        broadcast(new NewMessage($message))->toOthers();
-
-        return new MessageResource($message);
+        $this->messageService = $messageService;
     }
 
-
-
-
+    public function store(Request $request, $id)
+    {
+        return $this->messageService->createMessage($id, $request->text);
+    }
 
     public function getMessages(Post $post)
     {
-        // dd($post);
-        if (!$post) {
-            return response()->json(['message' => 'Post not found!']);
-        }
-        return MessageResource::collection($post->messages);
+        return $this->messageService->getMessages($post);
     }
 }
